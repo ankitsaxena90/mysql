@@ -55,51 +55,59 @@ mysql> select * from assets;
 9 rows in set (0.00 sec)
 
 --Inserting into allocation table--
-mysql>insert into allocation values (1,1,'01/01/2011','31/12/2011','private'), (1,2,'01/01/2012','till_date','private'), (2,2,'01/01/2011','31/12/2011','private'),(2,null,null,null,'manager_cupboard'), (8,null,null,null,'hr_almirah'), (9,null,null,null,'hr_almirah'), (3,1,'04/2011','till_date','private'), (4,2,'01/2011','till_date','private');
+mysql>insert into allocation values (1,1,'2011/01/01','2011/12/31','private'), (1,2,'2012/01/01',null,'private'), (2,2,'2011/01/01','2011/12/31','private'),(2,null,null,null,'manager_cupboard'), (8,null,null,null,'hr_almirah'), (9,null,null,null,'hr_almirah'), (3,1,'2011/04',null,'private'), (4,2,'2011/01',null,'private');
 Query OK, 8 rows affected (0.04 sec)
 mysql> insert into allocation (asset_id, location) values (5,'meeting_room'), (6,'meeting_room'),(7,'manager_cupboard');
 Query OK, 3 rows affected (0.07 sec)
 Records: 3  Duplicates: 0  Warnings: 0
 
 mysql> select * from allocation;
-+----------+--------+-------------------+-----------------+------------------+
-| asset_id | emp_id | date_assignedFrom |date_assignedUpto| location         |
-+----------+--------+-------------------+-----------------+------------------+
-|        1 |      1 | 01/01/2011        | 31/12/2011      | private          |
-|        1 |      2 | 01/01/2012        | till_date       | private          |
-|        2 |      2 | 01/01/2011        | 31/12/2011      | private          |
-|        2 |   NULL | NULL              | NULL            | manager_cupboard |
-|        8 |   NULL | NULL              | NULL            | hr_almirah       |
-|        9 |   NULL | NULL              | NULL            | hr_almirah       |
-|        3 |      1 | 04/2011           | till_date       | private          |
-|        4 |      2 | 01/2011           | till_date       | private          |
-|        5 |   NULL | NULL              | NULL            | meeting_room     |
-|        6 |   NULL | NULL              | NULL            | meeting_room     |
-|        7 |   NULL | NULL              | NULL            | manager_cupboard |
-+----------+--------+-------------------+-----------------+------------------+
++----------+--------+-------------------+-------------------+------------------+
+| asset_id | emp_id | date_assignedFrom | date_assignedUpto | location         |
++----------+--------+-------------------+-------------------+------------------+
+|        1 |      1 | 2011-01-01        | 2011-12-31        | private          |
+|        1 |      2 | 2012-01-01        | NULL              | private          |
+|        2 |      2 | 2011-01-01        | 2011-12-31        | private          |
+|        2 |   NULL | NULL              | NULL              | manager_cupboard |
+|        8 |   NULL | NULL              | NULL              | hr_almirah       |
+|        9 |   NULL | NULL              | NULL              | hr_almirah       |
+|        3 |      1 | 2011-04-00        | NULL              | private          |
+|        4 |      2 | 2011-01-00        | NULL              | private          |
+|        5 |   NULL | NULL              | NULL              | meeting_room     |
+|        6 |   NULL | NULL              | NULL              | meeting_room     |
+|        7 |   NULL | NULL              | NULL              | manager_cupboard |
++----------+--------+-------------------+-------------------+------------------+
 11 rows in set (0.00 sec)
 
 
+
 (i). Find the name of the employee who has been alloted the maximum number of assets till date
-mysql> select emp_id, emp_name from employees where emp_id = (select emp_id from allocation order by count(emp_id) desc Limit 1);
-+--------+----------+
-| emp_id | emp_name |
-+--------+----------+
-|      1 | Alice    |
-+--------+----------+
-1 row in set (0.00 sec)
+mysql> select  em.emp_name, x.emp_id, x.No_of_Assets from (select e.emp_id, count(e.emp_id) as No_of_Assets 
+from allocation e group by e.emp_id)x, 
+employees em where  x.No_of_Assets = (select max(x2.No_of_Assets) 
+from (select e2.emp_id, count(e2.emp_id) as No_of_Assets from allocation e2 
+group by e2.emp_id) x2) and em.emp_id = x.emp_id;
++----------+--------+--------------+
+| emp_name | emp_id | No_of_Assets |
++----------+--------+--------------+
+| Bob      |      2 |            3 |
++----------+--------+--------------+
+1 row in set (0.01 sec)
 
 
 
 
 
 (ii). Identify the name of the employee who currently has the maximum number of assets as of today
-mysql> select emp_id, emp_name from employees where emp_id = (select emp_id from allocation where date_assignedUpto = 'till_date' group by emp_name);
-+--------+----------+
-| emp_id | emp_name |
-+--------+----------+
-|      2 | Bob      |
-+--------+----------+
+mysql> select  em.emp_name, x.emp_id, x.No_of_Assets 
+	from (select e.emp_id, count(e.emp_id) as No_of_Assets from allocation e 
+	where e.date_assignedUpto is null group by e.emp_id)x, employees em where  x.No_of_Assets = 
+		(select max(x2.No_of_Assets) from (select e2.emp_id, count(e2.emp_id) as No_of_Assets from allocation e2 where 			e2.date_assignedUpto is null group by e2.emp_id) x2) and em.emp_id = x.emp_id;
++----------+--------+--------------+
+| emp_name | emp_id | No_of_Assets |
++----------+--------+--------------+
+| Bob      |      2 |            2 |
++----------+--------+--------------+
 1 row in set (0.00 sec)
 
 
@@ -111,11 +119,12 @@ mysql> select e.emp_id,e.emp_name,a.asset_name, al.date_assignedFrom,al.date_ass
 +--------+----------+------------+-------------------+-------------------+
 | emp_id | emp_name | asset_name | date_assignedFrom | date_assignedUpto |
 +--------+----------+------------+-------------------+-------------------+
-|      1 | Alice    | laptopA    | 01/01/2011        | 31/12/2011        |
-|      2 | Bob      | laptopA    | 01/01/2012        | till_date         |
-|      2 | Bob      | laptopB    | 01/01/2011        | 31/12/2011        |
+|      1 | Alice    | laptopA    | 2011-01-01        | 2011-12-31        |
+|      2 | Bob      | laptopA    | 2012-01-01        | NULL              |
+|      2 | Bob      | laptopB    | 2011-01-01        | 2011-12-31        |
 +--------+----------+------------+-------------------+-------------------+
 3 rows in set (0.00 sec)
+
 
 
 
@@ -139,7 +148,7 @@ mysql> select a.asset_name from assets a, allocation al where a.asset_id = al.as
 
 
 (v). An employee say Bob is leaving the company, write a query to get the list of assets he should be returning to the company.
-mysql> select a.asset_name from assets a, allocation al where a.asset_id = al.asset_id and al.date_assignedUpto = 'till_date' and al.emp_id = (select emp_id from employees where emp_name = 'Bob');
+mysql> select a.asset_name from assets a join allocation al on al.asset_id = a.asset_id join employees e on e.emp_id = al.emp_id where e.emp_name = 'Bob' and al.date_assignedUpto is null;
 +------------+
 | asset_name |
 +------------+
@@ -172,7 +181,7 @@ mysql> select asset_name as out_of_warranty_assets from assets where datediff(cu
 
 
 (vii). Return a list of Employee Names who do not have any asset assigned to them.
-mysql> select e.emp_id, e.emp_name from employees e left join allocation al on e.emp_id = al.emp_id where al.emp_id is null;
+mysql> select emp_id, emp_name from employees where emp_id not in (select emp_id from allocation where emp_id is not null and date_assignedUpto is null group by emp_id);
 +--------+----------+
 | emp_id | emp_name |
 +--------+----------+

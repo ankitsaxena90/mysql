@@ -38,19 +38,23 @@ mysql> select city, count(city) as N0_of_People from data group by city;
 
 
 (iii) Which city were the maximum respondents from?
-mysql> select city, count(city) as N0_of_People from data group by city order by count(city) desc Limit 1;
+
+select city, count(city) as N0_of_People from data group by city order by count(city) desc Limit 1;
+
+mysql> select  x.city, x.No_of_People from (select e.city, count(e.city) as No_of_People from data e group by  e.city) x
+where  x.No_of_People = (select max(x2.No_of_People) from (select e2.city, count(e2.city) as No_of_People from data e2 group by         e2.city) x2)
 +----------+--------------+
 | city     | N0_of_People |
 +----------+--------------+
 |  Chennai |           42 |
 +----------+--------------+
-1 row in set (0.01 sec)
+1 row in set (0.00 sec)
 
 
 
 
 
-(iV) What all email domains did people respond from?
+(iV) What all email citys did people respond from?
 mysql> select distinct substring_index(email,'@',-1) as Email_Domains from data; 
 +---------------+
 | Email_Domains |
@@ -66,10 +70,21 @@ mysql> select distinct substring_index(email,'@',-1) as Email_Domains from data;
 
 
 
-(v) Which is the most popular email domain among the respondents ?
-mysql> select distinct substring_index(email,'@',-1) as Email_Domains, count(substring_index(email,'@',-1)) as No_of_Users from data group by Email_domains order by Email_Domains desc Limit 2;
+(v) Which is the most popular email city among the respondents ?
+mysql> select substring_index (x.email,'@',-1), x.No_of_Users
+from  (select    substring_index(e.email,'@',-1), 
+    count(substring_index(e.email,'@',-1)) as No_of_Users
+  from data e
+  group by substring_index(e.email,'@',-1)) x
+where x.No_of_Users = 
+    (select  max(x2.No_of_Users)
+    from (select substring_index(e2.email,'@',-1) ,
+         count(substring_index (e2.email,'@',-1)) as No_of_Users
+      from data e2
+      group by 
+        substring_index(e2.email,'@',-1)) x2)
 +---------------+-------------+
-| Email_Domains | No_of_Users |
+| Email_citys 	| No_of_Users |
 +---------------+-------------+
 | yahoo.com     |          51 |
 | me.com        |          51 |

@@ -82,33 +82,46 @@ mysql> select * from allocation;
 
 
 (i). Find the name of the employee who has been alloted the maximum number of assets till date
-mysql> select  em.emp_name, x.emp_id, x.No_of_Assets from (select e.emp_id, count(e.emp_id) as No_of_Assets 
-from allocation e group by e.emp_id)x, 
-employees em where  x.No_of_Assets = (select max(x2.No_of_Assets) 
-from (select e2.emp_id, count(e2.emp_id) as No_of_Assets from allocation e2 
-group by e2.emp_id) x2) and em.emp_id = x.emp_id;
-+----------+--------+--------------+
-| emp_name | emp_id | No_of_Assets |
-+----------+--------+--------------+
-| Bob      |      2 |            3 |
-+----------+--------+--------------+
-1 row in set (0.01 sec)
+mysql> select emp_name, t1.emp_id from
+    -> (select emp_id, count(emp_id) count 
+    -> from allocation 
+    -> group by emp_id 
+    -> order by count desc ) as t1 
+    -> join 
+    -> ( select count(emp_id) count from allocation 
+    -> group by emp_id 
+    -> order by count desc limit 1 ) as t2 
+    -> join employees on t1.count = t2.count 
+    -> and t1.emp_id = employees.emp_id;
++----------+--------+
+| emp_name | emp_id |
++----------+--------+
+| Bob      |      2 |
++----------+--------+
+1 row in set (0.00 sec)
+
+
 
 
 
 
 
 (ii). Identify the name of the employee who currently has the maximum number of assets as of today
-mysql> select  em.emp_name, x.emp_id, x.No_of_Assets 
-	from (select e.emp_id, count(e.emp_id) as No_of_Assets from allocation e 
-	where e.date_assignedUpto is null group by e.emp_id)x, employees em where  x.No_of_Assets = 
-		(select max(x2.No_of_Assets) from (select e2.emp_id, count(e2.emp_id) as No_of_Assets from allocation e2 where 			e2.date_assignedUpto is null group by e2.emp_id) x2) and em.emp_id = x.emp_id;
+mysql> select emp_name, t1.emp_id,t1.count No_of_assets 
+    -> from (select emp_id, count(emp_id) count from allocation 
+    -> where date_assignedUpto is null 
+    -> group by emp_id order by count desc ) as t1 
+    -> join ( select count(emp_id) count from allocation 
+    -> where date_assignedUpto is null 
+    -> group by emp_id order by count desc limit 1 ) as t2 
+    -> join employees on t1.count = t2.count and t1.emp_id = employees.emp_id;
 +----------+--------+--------------+
-| emp_name | emp_id | No_of_Assets |
+| emp_name | emp_id | No_of_assets |
 +----------+--------+--------------+
 | Bob      |      2 |            2 |
 +----------+--------+--------------+
 1 row in set (0.00 sec)
+
 
 
 
@@ -181,7 +194,7 @@ mysql> select asset_name as out_of_warranty_assets from assets where datediff(cu
 
 
 (vii). Return a list of Employee Names who do not have any asset assigned to them.
-mysql> select emp_id, emp_name from employees where emp_id not in (select emp_id from allocation where emp_id is not null and date_assignedUpto is null group by emp_id);
+mysql> Select * from employees where emp_id not in (SELECT distinct(emp_id) FROM allocation where date_assignedUpto is not null);
 +--------+----------+
 | emp_id | emp_name |
 +--------+----------+
